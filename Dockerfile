@@ -19,9 +19,13 @@ RUN chown -R www-data:www-data /var/www/html \
 && chmod -R 755 /var/www/html
  
 # Point Apache document root to public/
-ENV APACHE_DOCUMENT_ROOT /var/www/html/public
- 
-RUN sed -i 's|DocumentRoot /var/www/html|DocumentRoot ${APACHE_DOCUMENT_ROOT}|g' /etc/apache2/sites-available/000-default.conf \
-&& sed -i 's|<Directory /var/www/html>|<Directory ${APACHE_DOCUMENT_ROOT}>|g' /etc/apache2/apache2.conf
- 
-EXPOSE 80
+ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
+
+RUN sed -ri "s!/var/www/html!${APACHE_DOCUMENT_ROOT}!g" /etc/apache2/sites-available/000-default.conf \
+	&& printf '\n<Directory %s>\n    AllowOverride All\n    Require all granted\n</Directory>\n' "${APACHE_DOCUMENT_ROOT}" >> /etc/apache2/apache2.conf \
+	&& chown -R www-data:www-data /var/www/html \
+	&& chmod -R 755 /var/www/html \
+	&& chmod +x /var/www/html/docker-entrypoint.sh
+
+EXPOSE 10000
+CMD ["/var/www/html/docker-entrypoint.sh"]

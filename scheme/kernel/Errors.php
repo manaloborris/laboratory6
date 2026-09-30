@@ -139,6 +139,7 @@ class Errors
 		http_response_code(500);
 		
 		if (config_item('environment') !== 'development') {
+			error_log('[LavaLust database error] ' . $message);
 			exit();
 		}
 

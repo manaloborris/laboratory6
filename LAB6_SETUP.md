@@ -10,6 +10,18 @@ This project is split into the LavaLust API in `LavaLust` and the React app in `
 
 The SQL file can also be imported into WAMP/phpMyAdmin without first creating a database. If Aiven does not allow `CREATE DATABASE`, select the database Aiven provides, remove the first `CREATE DATABASE` and `USE` statements before running the remaining schema, and use that selected database name for `DB_NAME`.
 
+### Existing Database: Per-User Products
+
+If the old shared `products` table already exists, do not rerun the full schema. The migration scripts explicitly select `lavalust_lab6`; change that `USE` statement only if your actual Aiven database has a different name. First run [`database/004_add_product_owner.sql`](database/004_add_product_owner.sql), then choose which account owns the existing shared products:
+
+```sql
+SELECT id, username, email FROM users ORDER BY id;
+UPDATE products SET user_id = <OWNER_USER_ID> WHERE user_id IS NULL;
+SELECT COUNT(*) FROM products WHERE user_id IS NULL;
+```
+
+Replace `<OWNER_USER_ID>` with the selected account's numeric ID. The count must be `0`; then run [`database/005_finalize_product_owner.sql`](database/005_finalize_product_owner.sql). If existing products belong to different users, assign rows individually by product ID before finalizing. Back up the database first.
+
 ## Run Locally
 
 Requirements: PHP with `pdo_mysql`, Node.js, and npm. Composer is not required; this LavaLust checkout has no `composer.json` and includes its API library.

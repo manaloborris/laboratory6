@@ -7,9 +7,10 @@ class Products_api extends Api_controller
     public function index()
     {
         $this->api->require_method('GET');
-        $this->authenticated_user();
+        $user = $this->authenticated_user();
         $products = $this->db->raw(
-            'SELECT id, product_name, description, price, quantity, created_at FROM products ORDER BY created_at DESC, id DESC'
+            'SELECT id, product_name, description, price, quantity, created_at FROM products WHERE user_id = ? ORDER BY created_at DESC, id DESC',
+            [$user['id']]
         )->fetchAll(PDO::FETCH_ASSOC);
 
         $this->api->respond(['data' => $products]);
@@ -18,15 +19,15 @@ class Products_api extends Api_controller
     public function create()
     {
         $this->api->require_method('POST');
-        $this->authenticated_user();
+        $user = $this->authenticated_user();
         $product = $this->validated_product($this->api->body());
 
         $this->db->raw(
-            'INSERT INTO products (product_name, description, price, quantity) VALUES (?, ?, ?, ?)',
-            [$product['product_name'], $product['description'], $product['price'], $product['quantity']]
+            'INSERT INTO products (user_id, product_name, description, price, quantity) VALUES (?, ?, ?, ?, ?)',
+            [$user['id'], $product['product_name'], $product['description'], $product['price'], $product['quantity']]
         );
         $id = $this->db->raw('SELECT LAST_INSERT_ID()')->fetchColumn();
-        $created = $this->find_product($id);
+        $created = $this->find_product($id, $user['id']);
 
         $this->api->respond(['message' => 'Product created.', 'data' => $created], 201);
     }
@@ -35,8 +36,8 @@ class Products_api extends Api_controller
     {
         $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? '');
         $this->api->require_method($method);
-        $this->authenticated_user();
-        $existing = $this->find_product($id);
+        $user = $this->authenticated_user();
+        $existing = $this->find_product($id, $user['id']);
 
         if (!$existing) {
             $this->api->respond_error('Product not found.', 404);
@@ -47,31 +48,31 @@ class Products_api extends Api_controller
         $product = $this->validated_product($input, $partial, $existing);
 
         $this->db->raw(
-            'UPDATE products SET product_name = ?, description = ?, price = ?, quantity = ? WHERE id = ?',
-            [$product['product_name'], $product['description'], $product['price'], $product['quantity'], $id]
+            'UPDATE products SET product_name = ?, description = ?, price = ?, quantity = ? WHERE id = ? AND user_id = ?',
+            [$product['product_name'], $product['description'], $product['price'], $product['quantity'], $id, $user['id']]
         );
 
-        $this->api->respond(['message' => 'Product updated.', 'data' => $this->find_product($id)]);
+        $this->api->respond(['message' => 'Product updated.', 'data' => $this->find_product($id, $user['id'])]);
     }
 
     public function delete($id)
     {
         $this->api->require_method('DELETE');
-        $this->authenticated_user();
+        $user = $this->authenticated_user();
 
-        if (!$this->find_product($id)) {
+        if (!$this->find_product($id, $user['id'])) {
             $this->api->respond_error('Product not found.', 404);
         }
 
-        $this->db->raw('DELETE FROM products WHERE id = ?', [$id]);
+        $this->db->raw('DELETE FROM products WHERE id = ? AND user_id = ?', [$id, $user['id']]);
         $this->api->respond(['message' => 'Product deleted.']);
     }
 
-    private function find_product($id)
+    private function find_product($id, $userId)
     {
         return $this->db->raw(
-            'SELECT id, product_name, description, price, quantity, created_at FROM products WHERE id = ? LIMIT 1',
-            [$id]
+            'SELECT id, product_name, description, price, quantity, created_at FROM products WHERE id = ? AND user_id = ? LIMIT 1',
+            [$id, $userId]
         )->fetch(PDO::FETCH_ASSOC);
     }
 

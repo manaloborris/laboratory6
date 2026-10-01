@@ -25,6 +25,12 @@ class Create_products_table
                     'auto_increment' => TRUE,
                     'null' => FALSE,
                 ],
+                'user_id' => [
+                    'type' => 'INT',
+                    'constraint' => 11,
+                    'unsigned' => TRUE,
+                    'null' => FALSE,
+                ],
                 'product_name' => [
                     'type' => 'VARCHAR',
                     'constraint' => 100,
@@ -51,6 +57,8 @@ class Create_products_table
                 ],
             ])
             ->add_key('id', primary: TRUE)
+            ->add_key('user_id', name: 'products_user_id_idx')
+            ->add_foreign_key('user_id', 'users', 'id', 'CASCADE')
             ->create_table('products');
     }
 

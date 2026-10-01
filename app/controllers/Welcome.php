@@ -3,7 +3,12 @@ defined('PREVENT_DIRECT_ACCESS') OR exit('No direct script access allowed');
 
 class Welcome extends Controller {
 	public function index() {
-		$this->call->view('welcome_page');
+		$this->call->library('api');
+		header('Content-Type: application/json; charset=utf-8');
+		$this->api->respond([
+			'service' => 'BorrisStock API',
+			'status' => 'online',
+		]);
 	}
 }
 ?>
